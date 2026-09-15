@@ -289,6 +289,16 @@ const DEPRECATED_INSTAGRAM_POSITIONS = new Set(["explore", "explore_home"]);
 /** Messenger Stories placement removed in Marketing API v26.0. */
 const DEPRECATED_MESSENGER_POSITIONS = new Set(["story"]);
 
+function removePublisherPlatform(targeting: TargetingSpec, platform: string): void {
+  if (!targeting.publisher_platforms) return;
+  const next = targeting.publisher_platforms.filter((p) => p !== platform);
+  if (next.length === 0) {
+    delete targeting.publisher_platforms;
+  } else {
+    targeting.publisher_platforms = next;
+  }
+}
+
 function stripDeprecatedPlacements(targeting: TargetingSpec): void {
   if (targeting.instagram_positions) {
     const next = targeting.instagram_positions.filter(
@@ -296,6 +306,7 @@ function stripDeprecatedPlacements(targeting: TargetingSpec): void {
     );
     if (next.length === 0) {
       delete targeting.instagram_positions;
+      removePublisherPlatform(targeting, "instagram");
     } else {
       targeting.instagram_positions = next;
     }
@@ -306,10 +317,18 @@ function stripDeprecatedPlacements(targeting: TargetingSpec): void {
     );
     if (next.length === 0) {
       delete targeting.messenger_positions;
+      removePublisherPlatform(targeting, "messenger");
     } else {
       targeting.messenger_positions = next;
     }
   }
+}
+
+/** Clone + strip v26-deprecated placements before any write to Meta. */
+function sanitizeTargetingForWrite(targeting: TargetingSpec): TargetingSpec {
+  const next = structuredClone(targeting);
+  stripDeprecatedPlacements(next);
+  return next;
 }
 
 function applyGeoOverride(targeting: TargetingSpec | undefined, geoOverride: GeoLocation): TargetingSpec {
@@ -861,7 +880,7 @@ export function registerAdSetTools(server: McpServer): void {
         status,
         optimization_goal,
         billing_event,
-        targeting: JSON.stringify(targeting),
+        targeting: JSON.stringify(sanitizeTargetingForWrite(targeting as TargetingSpec)),
       };
 
       if (daily_budget !== undefined) body.daily_budget = String(daily_budget);
@@ -912,7 +931,11 @@ export function registerAdSetTools(server: McpServer): void {
       if (destination_type !== undefined) body.destination_type = destination_type;
       if (daily_budget !== undefined) body.daily_budget = String(daily_budget);
       if (lifetime_budget !== undefined) body.lifetime_budget = String(lifetime_budget);
-      if (targeting !== undefined) body.targeting = JSON.stringify(targeting);
+      if (targeting !== undefined) {
+        body.targeting = JSON.stringify(
+          sanitizeTargetingForWrite(targeting as TargetingSpec),
+        );
+      }
       if (bid_amount !== undefined) body.bid_amount = String(bid_amount);
       if (bid_strategy !== undefined) body.bid_strategy = bid_strategy;
       if (end_time !== undefined) body.end_time = end_time;

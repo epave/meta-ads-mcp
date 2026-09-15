@@ -14,11 +14,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   (`deploy.yml`), `docker-compose.yml`, and the README compose example set
   `META_API_VERSION=v26.0`, ending the prior drift where production pinned
   `v22.0` while the client default was `v25.0`.
-- **v26 placement cleanup on ad-set clone.** `ads_clone_ad_set_bundle` strips
-  Instagram Explore (`explore` / `explore_home`) and Messenger Stories
-  (`messenger_positions: story`) before POST so clones of pre-v26 ad sets do
-  not fail. Schema descriptions no longer list those placements; Housing /
-  Employment / Credit create paths document that
+- **v26 placement cleanup on ad-set writes.** `ads_clone_ad_set_bundle`,
+  `ads_create_ad_set`, and `ads_update_ad_set` strip Instagram Explore
+  (`explore` / `explore_home`) and Messenger Stories
+  (`messenger_positions: story`) before POST. When a position array empties,
+  the matching `publisher_platforms` entry (`instagram` / `messenger`) is
+  removed so the targeting stays valid. Schema descriptions no longer list
+  those placements; Housing / Employment / Credit create paths document that
   `targeting_automation.advantage_audience` must be set explicitly to `0` or
   `1` under constrained targeting.
 
