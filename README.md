@@ -171,7 +171,7 @@ Tool definitions live under [src/tools/](src/tools/), wired together in [src/too
 
 ### Prerequisites
 
-- **Node.js 20.10+** (the project uses Import Attributes for JSON imports). Node 22 is used in the Docker image.
+- **Node.js 22.12+** (required by Firestore 9 / Vitest 5; the Docker image uses Node 22).
 - A **Meta access token** with `ads_management` and `ads_read` permissions, *or* a Meta App configured for Facebook Login (see below).
 
 ### Install & run
