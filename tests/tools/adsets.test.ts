@@ -525,6 +525,44 @@ describe("registerAdSetTools", () => {
       expect(sentTargeting.is_whatsapp_destination_ad).toBeUndefined();
     });
 
+    it("create: strips Instagram Explore and Messenger story placements (v26.0)", async () => {
+      const server = createMockMcpServer();
+      registerAdSetTools(server as never);
+
+      vi.stubGlobal("fetch", vi.fn()
+        .mockResolvedValueOnce(mockFetchResponse(sourceAdSet({
+          targeting: {
+            geo_locations: { countries: ["CL"] },
+            instagram_positions: ["stream", "explore", "explore_home", "reels"],
+            messenger_positions: ["story"],
+            publisher_platforms: ["instagram", "messenger"],
+          },
+          promoted_object: { pixel_id: "px_1" },
+        })))
+        .mockResolvedValueOnce(mockFetchResponse(oneAd()))
+        .mockResolvedValueOnce(mockFetchResponse({ id: "20001" }))
+        .mockResolvedValueOnce(mockFetchResponse({ copied_ad_id: "30001" }))
+        .mockResolvedValueOnce(mockFetchResponse({ success: true })));
+
+      const handler = server._registeredTools[2].handler;
+      await handler({
+        account_id: "act_123",
+        source_ad_set_id: "2099",
+        target_ad_set: { name: "Target", geo_override: { countries: ["CO"] }, status: "PAUSED" },
+        creative_overrides: [],
+        dry_run: false,
+        idempotency_key: "k-v26-placements-1",
+      });
+
+      const adsetPost = vi.mocked(fetch).mock.calls[2];
+      const sentTargeting = JSON.parse(
+        new URLSearchParams(adsetPost[1]?.body as string).get("targeting") ?? "{}",
+      ) as Record<string, unknown>;
+      expect(sentTargeting.instagram_positions).toEqual(["stream", "reels"]);
+      expect(sentTargeting.messenger_positions).toBeUndefined();
+      expect(sentTargeting.publisher_platforms).toEqual(["instagram"]);
+    });
+
     it("user-provided daily_budget wins over source lifetime_budget", async () => {
       const server = createMockMcpServer();
       registerAdSetTools(server as never);
@@ -651,6 +689,36 @@ describe("registerAdSetTools", () => {
       expect(params.has("daily_budget")).toBe(false);
       expect(params.has("lifetime_budget")).toBe(false);
     });
+
+    it("strips Explore and Messenger story placements before POST (v26.0)", async () => {
+      const server = createMockMcpServer();
+      registerAdSetTools(server as never);
+
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockFetchResponse({ id: "2001" })));
+
+      const tool = server._registeredTools.find((t) => t.name === "ads_create_ad_set");
+      await tool!.handler({
+        account_id: "act_123",
+        campaign_id: "1001",
+        name: "v26 create",
+        destination_type: "WEBSITE",
+        status: "PAUSED",
+        optimization_goal: "LINK_CLICKS",
+        billing_event: "IMPRESSIONS",
+        targeting: {
+          geo_locations: { countries: ["MX"] },
+          instagram_positions: ["stream", "explore", "explore_home"],
+          messenger_positions: ["story", "sponsored_messages"],
+          publisher_platforms: ["instagram", "messenger"],
+        },
+      });
+
+      const params = new URLSearchParams(vi.mocked(fetch).mock.calls[0][1]?.body as string);
+      const sent = JSON.parse(params.get("targeting") ?? "{}") as Record<string, unknown>;
+      expect(sent.instagram_positions).toEqual(["stream"]);
+      expect(sent.messenger_positions).toEqual(["sponsored_messages"]);
+      expect(sent.publisher_platforms).toEqual(["instagram", "messenger"]);
+    });
   });
 
   describe("ads_update_ad_set handler", () => {
@@ -681,6 +749,30 @@ describe("registerAdSetTools", () => {
 
       expect(result.content[0].text).toContain("Ad set 2001 updated successfully");
       expect(result.content[0].text).toContain("daily_budget");
+    });
+
+    it("strips Explore and drops messenger platform when story was sole position (v26.0)", async () => {
+      const server = createMockMcpServer();
+      registerAdSetTools(server as never);
+
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockFetchResponse({ success: true })));
+
+      const tool = server._registeredTools.find((t) => t.name === "ads_update_ad_set");
+      await tool!.handler({
+        ad_set_id: "2001",
+        targeting: {
+          geo_locations: { countries: ["MX"] },
+          instagram_positions: ["explore"],
+          messenger_positions: ["story"],
+          publisher_platforms: ["instagram", "messenger", "facebook"],
+        },
+      });
+
+      const params = new URLSearchParams(vi.mocked(fetch).mock.calls[0][1]?.body as string);
+      const sent = JSON.parse(params.get("targeting") ?? "{}") as Record<string, unknown>;
+      expect(sent.instagram_positions).toBeUndefined();
+      expect(sent.messenger_positions).toBeUndefined();
+      expect(sent.publisher_platforms).toEqual(["facebook"]);
     });
   });
 });
