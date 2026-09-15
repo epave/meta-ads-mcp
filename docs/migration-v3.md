@@ -158,8 +158,8 @@ and cannot operate across multiple advertiser accounts.
 
 ## Compatibility
 
-- Node 20+
-- `@modelcontextprotocol/sdk` ^1.29 (annotations + `registerTool` API).
+- Node 22.12+
+- `@modelcontextprotocol/sdk` ^1.30 (annotations + `registerTool` API).
 - HTTP and stdio transports unchanged.
 - Per-user OAuth, System User token registry, server-to-server API key,
   Firestore-backed encrypted token store — all unchanged.
