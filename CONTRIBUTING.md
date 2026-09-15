@@ -15,7 +15,7 @@ npm install
 cp .env.example .env   # fill in only what you need for the mode you'll test
 ```
 
-You need **Node.js 20.10+** (Import Attributes syntax is used for JSON imports). The Docker image runs on Node 22; both work for development.
+You need **Node.js 22.12+** (required by Firestore 9 / Vitest 5). The Docker image also runs on Node 22.
 
 For multi-tenant HTTP testing locally:
 

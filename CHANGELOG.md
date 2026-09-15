@@ -9,6 +9,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- **Dependency refresh.** Bumped runtime/dev packages to current releases,
+  including MCP SDK 1.30, Firestore 9, Pino 10, Zod 4, Vitest 5, and aligned
+  tooling (eslint / typescript-eslint / tsx / jose / cors). `engines.node` and
+  CI are now **Node 22.12+** (matches the Docker image; Firestore 9 / Vitest 5
+  require it). TypeScript is on **6.0.x** (typescript-eslint allows `<6.1.0`;
+  TypeScript 7 is blocked until typescript-eslint gains a TS 7 API). Zod call
+  sites updated for the v4 `z.record(key, value)` signature.
 - **Marketing API default bumped to v26.0.** `DEFAULT_API_VERSION` (shared by
   `MetaApiClient` and Meta OAuth) is now `v26.0`. Cloud Run
   (`deploy.yml`), `docker-compose.yml`, and the README compose example set
